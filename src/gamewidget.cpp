@@ -1,27 +1,28 @@
-#include "gamewidget.h"
 #include <QShortcut>
 #include <QMessageBox>
 #include <QPainter>
 #include <QKeyEvent>
+#include <QStandardPaths>
+#include <QDir>
+#include "gamewidget.h"
 #include "maparch.h"
 #include "game.h"
 #include "tilesdata.h"
 #include "Frame.h"
 #include "FrameSet.h"
 #include "shared/qtgui/qfilewrap.h"
+#include "shared/implementers/sn_sdl.h"
+#include "shared/implementers/mu_sdl.h"
 
 CGameWidget::CGameWidget(QWidget *parent)
     : QWidget{parent}, CGameMixin()
 {
-    qDebug("constructor\n");
-    new QShortcut(QKeySequence(Qt::Key_F11), this, SLOT(changeZoom()));
-
     m_mapArch = new CMapArch();
 }
 
 void CGameWidget::init()
 {
-    //setZoom(true);
+    enableHiScore();
     m_zoom = true;
     QFileWrap file;
     const char filename[]{":/data/levels.mapz"} ;
@@ -34,9 +35,11 @@ void CGameWidget::init()
     } else {
         qDebug("can't read: %s\n", filename);
     }
+    initSounds();
     m_timer.setInterval(1000 / TICK_RATE);
     m_timer.start();
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(mainLoop()));
+    qDebug() << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 }
 
 void CGameWidget::exitGame()
@@ -46,7 +49,6 @@ void CGameWidget::exitGame()
 
 void CGameWidget::mainLoop()
 {
-    //qDebug("mainLoop\n");
     CGameMixin::mainLoop();
     repaint();
     update();
@@ -54,7 +56,6 @@ void CGameWidget::mainLoop()
 
 void CGameWidget::changeZoom()
 {
-    qDebug("changeZoom");
     CGameMixin::changeZoom();
 }
 
@@ -87,7 +88,6 @@ void CGameWidget::setZoom(bool zoom)
 
 void CGameWidget::paintEvent(QPaintEvent *)
 {
-    //qDebug("paint\n");
     CFrame bitmap(WIDTH, HEIGHT);
     switch (m_game->mode())
     {
@@ -98,14 +98,18 @@ void CGameWidget::paintEvent(QPaintEvent *)
         break;
     case CGame::MODE_LEVEL:
         drawScreen(bitmap);
+        break;
+    case CGame::MODE_HISCORES:
+        drawScores(bitmap);
+        break;
+    case CGame::MODE_CLICKSTART:
+        drawPreScreen(bitmap);
     }
 
     // show the screen
     QSize sz = size();
-    //QSize sz{WIDTH * 2, HEIGHT * 2};
-
     const QImage & img = QImage(reinterpret_cast<uint8_t*>(bitmap.getRGB()), bitmap.len(), bitmap.hei(), QImage::Format_RGBX8888);
-    const QPixmap & pixmap = QPixmap::fromImage(m_zoom ? img.scaled(sz): img);
+    const QPixmap & pixmap = QPixmap::fromImage(img.scaled(sz));
     QPainter p(this);
     p.drawPixmap(0, 0, pixmap);
     p.end();
@@ -222,6 +226,7 @@ void CGameWidget::keyReflector(int key, uint8_t keyState)
             result = Key_BackSpace;
             break;
         case Qt::Key_Enter:
+        case Qt::Key_Return:
             result = Key_Enter;
             break;
         default:
@@ -231,3 +236,146 @@ void CGameWidget::keyReflector(int key, uint8_t keyState)
     m_keyStates[result] = keyState;
 }
 
+
+QString CGameWidget::hiScorePath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/hiscores.dat";
+}
+
+QString CGameWidget::saveGamePath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/savegame.dat";
+}
+
+void CGameWidget::createPath()
+{
+    QString path{QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)};
+    if (!QDir(path).exists()) {
+        QDir().mkpath(path);
+    }
+}
+
+bool CGameWidget::loadScores()
+{
+    std::string path{hiScorePath().toStdString()};
+    qDebug("reading %s\n", path.c_str());
+    QFileWrap file;
+    if (file.open(path.c_str(), "rb"))
+    {
+        if (file.getSize() == sizeof(m_hiscores))
+        {
+            file.read(m_hiscores, sizeof(m_hiscores));
+            file.close();
+        }
+        else
+        {
+            qDebug("size mismatch. resetting to default.\n");
+            clearScores();
+        }
+        return true;
+    }
+    qDebug("can't read %s\n", path.c_str());
+    return false;
+}
+
+bool CGameWidget::saveScores()
+{
+    createPath();
+    std::string path{hiScorePath().toStdString()};
+    qDebug("reading %s\n", path.c_str());
+    QFileWrap file;
+    if (file.open(path.c_str(), "wb"))
+    {
+        file.write(m_hiscores, sizeof(m_hiscores));
+        file.close();
+        return true;
+    }
+    qDebug("can't write %s\n", path.c_str());
+    return false;
+}
+
+void CGameWidget::save()
+{
+    createPath();
+    std::string path{saveGamePath().toStdString()};
+    if (m_game->mode() != CGame::MODE_LEVEL)
+    {
+        qDebug("cannot save while not playing\n");
+        return;
+    }
+
+    qDebug("writing: %s\n", path.c_str());
+    std::string name{"Testing123"};
+    FILE *tfile = fopen(path.c_str(), "wb");
+    if (tfile)
+    {
+        write(tfile, name);
+        fclose(tfile);
+    }
+    else
+    {
+        qDebug("can't write:%s\n", path.c_str());
+    }
+}
+
+void CGameWidget::load()
+{
+    std::string path{saveGamePath().toStdString()};
+    m_game->setMode(CGame::MODE_IDLE);
+    std::string name;
+    qDebug("reading: %s\n", path.c_str());
+    FILE *sfile = fopen(path.c_str(), "rb");
+    if (sfile)
+    {
+        if (!read(sfile, name))
+        {
+            qDebug("incompatible file\n");
+        }
+        fclose(sfile);
+    }
+    else
+    {
+        qDebug("can't read:%s\n", path.c_str());
+    }
+    m_game->setMode(CGame::MODE_LEVEL);
+}
+
+void CGameWidget::initSounds()
+{
+    constexpr const char *filelist[]{
+        ":/data/sounds/gruup.wav",
+        ":/data/sounds/key.ogg",
+        ":/data/sounds/0009.ogg",
+        ":/data/sounds/coin1.oga",
+    };
+    auto m_sound = new CSndSDL();
+    QFileWrap file;
+    for (size_t i = 0; i < sizeof(filelist) / sizeof(filelist[0]); ++i)
+    {
+        auto soundName = filelist[i];
+        if (file.open(soundName, "rb"))
+        {
+            int size = file.getSize();
+            auto sound = new uint8_t[size];
+            file.read(sound, size);
+            file.close();
+            qDebug("loaded %s: %d bytes\n", soundName, size);
+            m_sound->add(sound, size, i + 1);
+        }
+        else
+        {
+            qDebug("failed to open %s\n", soundName);
+        }
+    }
+    m_game->attach(m_sound);
+}
+
+void CGameWidget::initMusic()
+{
+    m_music = new CMusicSDL();
+    const char music[] = "data/cs3idea_64.ogg";
+    if (m_music && m_music->open(music))
+    {
+        m_music->play();
+    }
+}

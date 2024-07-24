@@ -31,11 +31,16 @@ CSndSDL::CSndSDL()
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
     {
         printf("SDL_init failed: %s\n", SDL_GetError());
-        m_valid = false;
+        return;
     }
     if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
     {
         printf("SDL_init failed: %s\n", SDL_GetError());
+        return;
+    }
+    if (Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 8192) < 0)
+    {
+        printf("Mix_OpenAudio failed: %s\n", SDL_GetError());
         return;
     }
     m_valid = true;

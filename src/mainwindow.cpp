@@ -7,6 +7,9 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    QCoreApplication::setApplicationName("cs3v2");
+    QCoreApplication::setOrganizationName("cfrankb");
+
     setWindowTitle(tr("CS3v2 Runtime"));
     m_widget = new CGameWidget(this);
     m_widget->init();

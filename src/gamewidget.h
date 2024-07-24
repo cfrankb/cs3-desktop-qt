@@ -6,6 +6,7 @@
 #include <QWidget>
 
 class CMapArch;
+class IMusic;
 
 class CGameWidget : public QWidget, public CGameMixin
 {
@@ -13,6 +14,8 @@ class CGameWidget : public QWidget, public CGameMixin
 public:
     explicit CGameWidget(QWidget *parent = nullptr);
     void init();
+    virtual void save() override;
+    virtual void load() override;
 
 protected slots:
     virtual void mainLoop() override;
@@ -21,6 +24,7 @@ protected slots:
 
 protected:
     CMapArch *m_mapArch = nullptr;
+    IMusic *m_music = nullptr;
 
 private:
     QTimer m_timer;
@@ -31,6 +35,13 @@ private:
     virtual void sanityTest() override;
     virtual void setZoom(bool zoom) override;
     void keyReflector(int key, uint8_t keyState);
+    virtual bool loadScores() override;
+    virtual bool saveScores() override;
+    QString hiScorePath();
+    QString saveGamePath();
+    void createPath();
+    void initSounds();
+    void initMusic();
 
 signals:
 };
