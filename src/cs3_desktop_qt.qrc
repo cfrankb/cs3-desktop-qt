@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>data/sounds/0009.ogg</file>
+        <file>data/sounds/coin1.oga</file>
+        <file>data/sounds/gruup.wav</file>
+        <file>data/sounds/key.ogg</file>
+        <file>data/animz.obl</file>
+        <file>data/annie.obl</file>
+        <file>data/bitfont.bin</file>
+        <file>data/cs3idea_64.ogg</file>
+        <file>data/levels.mapz</file>
+        <file>data/tiles.obl</file>
+    </qresource>
+</RCC>
