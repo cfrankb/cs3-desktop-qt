@@ -42,6 +42,8 @@ private:
     void createPath();
     void initSounds();
     void initMusic();
+    virtual void stopMusic() override;
+    virtual void startMusic() override;
 
 signals:
 };

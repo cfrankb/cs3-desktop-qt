@@ -36,6 +36,7 @@ void CGameWidget::init()
         qDebug("can't read: %s\n", filename);
     }
     initSounds();
+    initMusic();
     m_timer.setInterval(1000 / TICK_RATE);
     m_timer.start();
     connect(&m_timer, SIGNAL(timeout()), this, SLOT(mainLoop()));
@@ -359,12 +360,12 @@ void CGameWidget::initSounds()
             auto sound = new uint8_t[size];
             file.read(sound, size);
             file.close();
-            qDebug("loaded %s: %d bytes\n", soundName, size);
+            qDebug("loaded %s: %d bytes", soundName, size);
             m_sound->add(sound, size, i + 1);
         }
         else
         {
-            qDebug("failed to open %s\n", soundName);
+            qDebug("failed to open: %s", soundName);
         }
     }
     m_game->attach(m_sound);
@@ -373,9 +374,46 @@ void CGameWidget::initSounds()
 void CGameWidget::initMusic()
 {
     m_music = new CMusicSDL();
-    const char music[] = "data/cs3idea_64.ogg";
-    if (m_music && m_music->open(music))
+    // copy embedded music file to temp folder
+    QString path = QDir::tempPath() + "/cs3idea_64.ogg";
+    if (!QFile(path).exists()) {
+        uint8_t *buf = nullptr;
+        int size;
+        QFileWrap file;
+        if (file.open(":/data/cs3idea_64.ogg", "rb")) {
+            size = file.getSize();
+            buf = new uint8_t[size];
+            file.read(buf, size);
+            file.close();
+        }
+        if (buf && file.open(path.toStdString().c_str(), "wb")) {
+            file.write(buf, size);
+            file.close();
+        }
+    }
+
+    if (m_music && m_music->open(path.toStdString().c_str()))
     {
         m_music->play();
+    }
+}
+
+void CGameWidget::stopMusic()
+{
+    if (m_music)
+    {
+        m_music->stop();
+    }
+}
+
+void CGameWidget::startMusic()
+{
+    if (m_music)
+    {
+        m_music->play();
+    }
+    else
+    {
+        initMusic();
     }
 }
