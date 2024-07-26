@@ -471,6 +471,21 @@ void CGameMixin::mainLoop()
     case CGame::MODE_IDLE:
     case CGame::MODE_CLICKSTART:
         return;
+    case CGame::MODE_HELP:
+        if (!m_keyStates[Key_F1])
+        {
+            // keyup
+            m_keyRepeters[Key_F1] = 0;
+        }
+        else if (m_keyRepeters[Key_F1])
+        {
+            // avoid keys repeating
+            return;
+        } else {
+            m_game->setMode(CGame::MODE_LEVEL);
+            m_keyRepeters[Key_F1] = 1;
+        }
+        return;
     }
 
     manageGamePlay();
@@ -675,6 +690,55 @@ void CGameMixin::drawScores(CFrame &bitmap)
     }
 }
 
+void CGameMixin::drawHelpScreen(CFrame &bitmap)
+{
+    const char *helptext[]{
+        "",
+        "!HELP",
+        "!====",
+        "",
+        "Use cursor keys to move.",
+        "",
+        "Collect all the diamonds to move to the",
+        "next level. Avoid monsters and other",
+        "hazards.",
+        "",
+        "Pick up objects to open up secret",
+        "passages.",
+        "",
+        "F1 Help",
+        "F2 Restart Game",
+        "F3 Erase Scores",
+        "F4 Pause Game",
+        "F9 Load savegame",
+        "F10 Save savegame ",
+        "F11 Toggle Music",
+        "F12 Harcore Mode",
+        "",
+        "~PRESS [F1] AGAIN TO RETURN TO THE GAME.",
+    };
+
+    char t[50];
+    int y =0;
+
+    for (size_t i=0; i < sizeof(helptext)/sizeof(helptext[0]);++i) {
+        strcpy(t, helptext[i]);
+        char *p = t;
+        int x = 0;
+        auto color = WHITE;
+        if (p[0] =='~') {
+            ++p;
+            color = YELLOW;
+        }
+        else if (p[0] =='!') {
+            ++p;
+            x = (WIDTH - strlen(p) * FONT_SIZE) / 2;
+        }
+        drawFont(bitmap, x, y * FONT_SIZE, p, color);
+        ++y;
+    }
+}
+
 bool CGameMixin::handlePrompts()
 {
     auto result = m_prompt != PROMPT_NONE;
@@ -739,6 +803,10 @@ void CGameMixin::handleFunctionKeys()
 
         switch (k)
         {
+        case Key_F1:
+            m_game->setMode(CGame::MODE_HELP);
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
         case Key_F2: // restart game
             m_prompt = PROMPT_RESTART_GAME;
             break;

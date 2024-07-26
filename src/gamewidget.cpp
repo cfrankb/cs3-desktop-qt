@@ -105,6 +105,9 @@ void CGameWidget::paintEvent(QPaintEvent *)
         break;
     case CGame::MODE_CLICKSTART:
         drawPreScreen(bitmap);
+        break;
+    case CGame::MODE_HELP:
+        drawHelpScreen(bitmap);
     }
 
     // show the screen

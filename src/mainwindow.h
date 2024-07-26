@@ -21,6 +21,5 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    CGameWidget *m_widget;
 };
 #endif // MAINWINDOW_H

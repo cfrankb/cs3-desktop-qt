@@ -11,14 +11,10 @@ MainWindow::MainWindow(QWidget *parent)
     QCoreApplication::setOrganizationName("cfrankb");
 
     setWindowTitle(tr("CS3v2 Runtime"));
-    m_widget = new CGameWidget(this);
-    m_widget->init();
-
-    QPalette pal = QPalette();
-
-    m_widget->update();
-
-    setCentralWidget(m_widget);
+    auto widget = new CGameWidget(this);
+    widget->init();
+    widget->update();
+    setCentralWidget(widget);
     centralWidget()->show();
     centralWidget()->setFocus();
 }

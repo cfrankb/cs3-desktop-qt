@@ -22,16 +22,16 @@
 #include "IFile.h"
 
 static const char SIG[]{'M', 'A', 'P', 'Z'};
-static const char XTR_SIG[]{"XTR"};
-static const char XTR_VER = 0;
-static const uint16_t VERSION = 0;
-static const uint16_t MAX_SIZE = 256;
-static const uint16_t MAX_TITLE = 255;
+static const char XTR_SIG[]{'X','T','R'};
+static const char XTR_VER{0};
+static const uint16_t VERSION{0};
+static const uint16_t MAX_SIZE{256};
+static const uint16_t MAX_TITLE{255};
 
 typedef struct
 {
     char sig[3];
-    char ver;
+    uint8_t ver;
 } extrahdr_t;
 
 CMap::CMap(uint16_t len, uint16_t hei, uint8_t t)
